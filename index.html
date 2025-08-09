@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Useless Gravity Text - Neon Style with Explosion</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+
+  body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    font-family: 'Orbitron', monospace, sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @keyframes gradientBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+
+  #text-input {
+    width: 80%;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 16px 20px;
+    font-size: 22px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    outline: none;
+    text-align: center;
+    background: #111a27;
+    color: #7fffd4;
+    box-shadow: 0 0 10px #7fffd4aa;
+    transition: box-shadow 0.3s ease;
+  }
+
+  #text-input::placeholder {
+    color: #55a3a3cc;
+  }
+
+  #text-input:focus {
+    box-shadow: 0 0 30px #40e0d0cc;
+  }
+
+  #world {
+    flex-grow: 1;
+    position: relative;
+  }
+
+  .falling-text {
+    position: absolute;
+    font-size: 28px;
+    font-weight: 900;
+    user-select: none;
+    white-space: nowrap;
+    cursor: default;
+
+    /* Neon glowing text effect */
+    color: #40e0d0;
+    text-shadow:
+      0 0 5px #40e0d0,
+      0 0 10px #40e0d0,
+      0 0 20px #40e0d0,
+      0 0 30px #40e0d0,
+      0 0 40px #40e0d0;
+
+    /* Smooth rotation */
+    transform-origin: center bottom;
+  }
+
+  /* Styles for exploded letter pieces */
+  .exploded-letter {
+    position: absolute;
+    font-size: 28px;
+    font-weight: 900;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+    color: inherit;
+    text-shadow:
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor,
+      0 0 40px currentColor;
+  }
+</style>
+</head>
+<body>
+
+<input id="text-input" type="text" placeholder="Type something and press Enter..." />
+<div id="world"></div>
+
+<script>
+  const textInput = document.getElementById('text-input');
+  const world = document.getElementById('world');
+
+  let fallingObjects = [];
+  const gravity = 0.4;
+  const friction = 0.75;
+
+  textInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && textInput.value.trim() !== '') {
+      createText(textInput.value.trim());
+      textInput.value = '';
+    }
+  });
+
+  function createText(text) {
+    const element = document.createElement('div');
+    element.classList.add('falling-text');
+    element.textContent = text;
+
+    // Randomize hue for subtle color shift
+    const hue = Math.floor(Math.random() * 360);
+    element.style.color = `hsl(${hue}, 80%, 65%)`;
+    element.style.textShadow = `
+      0 0 8px hsl(${hue}, 90%, 70%),
+      0 0 15px hsl(${hue}, 90%, 60%),
+      0 0 25px hsl(${hue}, 90%, 55%),
+      0 0 40px hsl(${hue}, 90%, 50%)
+    `;
+
+    world.appendChild(element);
+
+    const xStart = Math.random() * (world.clientWidth - element.clientWidth);
+
+    fallingObjects.push({
+      element,
+      x: xStart,
+      y: 0,
+      vy: 0,
+      rotation: 0,
+      vRotation: (Math.random() * 2 - 1) * 0.5,
+      hue,
+      exploded: false // track explosion state
+    });
+  }
+
+  // Function to create exploded letters flying out
+  function explodeText(obj) {
+    const rect = obj.element.getBoundingClientRect();
+    const worldRect = world.getBoundingClientRect();
+
+    // Get absolute position relative to #world
+    const baseX = obj.x;
+    const baseY = obj.y;
+
+    // Get text and split into letters
+    const text = obj.element.textContent;
+    const letters = text.split('');
+
+    // Remove original element immediately
+    obj.element.remove();
+
+    // Create letter elements flying outwards
+    letters.forEach((letter, i) => {
+      const letterDiv = document.createElement('div');
+      letterDiv.classList.add('exploded-letter');
+      letterDiv.textContent = letter;
+      letterDiv.style.color = obj.element.style.color;
+      letterDiv.style.textShadow = obj.element.style.textShadow;
+
+      // Position roughly in place of original text's start + letter width
+      // We'll position horizontally with some offset
+      // Estimate letter width roughly (better would be measure but this works for monospace)
+      const approxLetterWidth = 18;
+      letterDiv.style.left = `${baseX + approxLetterWidth * i}px`;
+      letterDiv.style.top = `${baseY}px`;
+      letterDiv.style.opacity = '1';
+
+      world.appendChild(letterDiv);
+
+      // Store animation data
+      const angle = Math.random() * 2 * Math.PI;
+      const speed = 3 + Math.random() * 3;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const vRotation = (Math.random() * 4 - 2); // rotation speed
+
+      explodedLetters.push({
+        element: letterDiv,
+        x: baseX + approxLetterWidth * i,
+        y: baseY,
+        vx,
+        vy,
+        rotation: 0,
+        vRotation,
+        opacity: 1
+      });
+    });
+  }
+
+  let explodedLetters = [];
+
+  function animate() {
+    // Animate falling objects
+    fallingObjects.forEach(obj => {
+      if(obj.exploded) return; // skip if exploded
+
+      obj.vy += gravity;
+      obj.y += obj.vy;
+
+      const floor = world.clientHeight - obj.element.clientHeight;
+
+      if(obj.y > floor) {
+        obj.y = floor;
+        obj.vy *= -friction;
+
+        if (!obj.exploded && Math.abs(obj.vy) < 1) {
+          // Trigger explosion once velocity is low enough (settled)
+          obj.exploded = true;
+          explodeText(obj);
+        }
+      }
+
+      obj.rotation += obj.vRotation;
+      obj.element.style.top = `${obj.y}px`;
+      obj.element.style.left = `${obj.x}px`;
+      obj.element.style.transform = `rotate(${obj.rotation}deg)`;
+    });
+
+    // Animate exploded letters
+    explodedLetters.forEach((letter, index) => {
+      letter.vy += gravity * 0.2; // lighter gravity for exploded letters
+      letter.x += letter.vx;
+      letter.y += letter.vy;
+      letter.rotation += letter.vRotation;
+      letter.opacity -= 0.02;
+
+      letter.element.style.top = `${letter.y}px`;
+      letter.element.style.left = `${letter.x}px`;
+      letter.element.style.transform = `rotate(${letter.rotation}deg)`;
+      letter.element.style.opacity = letter.opacity;
+
+      if(letter.opacity <= 0) {
+        letter.element.remove();
+        explodedLetters.splice(index, 1);
+      }
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
+
+</body>
+</html>
